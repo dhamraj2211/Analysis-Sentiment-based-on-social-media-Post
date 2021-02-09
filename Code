@@ -1,0 +1,409 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import json\n",
+    "import pandas as pd\n",
+    "import time\n",
+    "import numpy as np\n",
+    "import itertools\n",
+    "import matplotlib.pyplot as plt \n",
+    "from sklearn.metrics import confusion_matrix\n",
+    "from sklearn.feature_extraction.text import CountVectorizer\n",
+    "from sklearn import metrics"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "tweets_data = []\n",
+    "x = []\n",
+    "y = []\n",
+    "vectorizer = CountVectorizer(stop_words='english')\n",
+    "\n",
+    "def retrieveTweet(data_url):\n",
+    "\n",
+    "    tweets_data_path = data_url\n",
+    "    tweets_file = open(tweets_data_path, \"r\")\n",
+    "    for line in tweets_file:\n",
+    "        try:\n",
+    "            tweet = json.loads(line)\n",
+    "            tweets_data.append(tweet)\n",
+    "        except:\n",
+    "            continue\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "             \n",
+    "def retrieveProcessedData(Pdata_url):\n",
+    "    sent = pd.read_excel(Pdata_url)\n",
+    "    for i in range(len(tweets_data)):\n",
+    "        if tweets_data[i]['id']==sent['id'][i]:\n",
+    "            x.append(tweets_data[i]['text'])\n",
+    "            y.append(sent['sentiment'][i])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def plot_confusion_matrix(cm, classes,\n",
+    "                          normalize=False,\n",
+    "                          title='Confusion matrix',\n",
+    "                          cmap=plt.cm.Blues):\n",
+    "    plt.imshow(cm, interpolation='nearest', cmap=cmap)\n",
+    "    plt.title(title)\n",
+    "    plt.colorbar()\n",
+    "    tick_marks = np.arange(len(classes))\n",
+    "    plt.xticks(tick_marks, classes, rotation=45)\n",
+    "    plt.yticks(tick_marks, classes)\n",
+    "\n",
+    "    fmt = '.2f' if normalize else 'd'\n",
+    "    thresh = cm.max() / 2.\n",
+    "    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):\n",
+    "        plt.text(j, i, format(cm[i, j], fmt),\n",
+    "                 horizontalalignment=\"center\",\n",
+    "                 color=\"white\" if cm[i, j] > thresh else \"black\")\n",
+    "\n",
+    "    plt.tight_layout()\n",
+    "    plt.ylabel('True label')\n",
+    "    plt.xlabel('Predicted label')   "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def nbTrain():\n",
+    "    from sklearn.naive_bayes import MultinomialNB\n",
+    "    start_timenb = time.time()\n",
+    "    train_features = vectorizer.fit_transform(x)\n",
+    "    \n",
+    "    actual = y\n",
+    "    \n",
+    "    nb = MultinomialNB()\n",
+    "    nb.fit(train_features, [int(r) for r in y])\n",
+    "    \n",
+    "    test_features = vectorizer.transform(x)\n",
+    "    predictions = nb.predict(test_features)\n",
+    "    fpr, tpr, thresholds = metrics.roc_curve(actual, predictions, pos_label=1)\n",
+    "    nbscore = format(metrics.auc(fpr, tpr))\n",
+    "    nbscore = float(nbscore)*100\n",
+    "    \n",
+    "    nb_matrix = confusion_matrix(actual, predictions)\n",
+    "    plt.figure()\n",
+    "    plot_confusion_matrix(nb_matrix, classes=[-1,0,1], title='Confusion matrix For NB classifier')\n",
+    "    \n",
+    "    print(\"\\n\")\n",
+    "    \n",
+    "#    test_try= vectorizer.transform([\"Lets help those in need, fight anxiety and bring happiness\"])\n",
+    "#    test_try2= vectorizer.transform([\"Dont look down at people with anxiety rather give love and respect to all. shout! Equality.\"])\n",
+    "#    predictr = nb.predict(test_try)\n",
+    "#    predictt = nb.predict(test_try2)\n",
+    "    \n",
+    "    \n",
+    "#    print(predictr)\n",
+    "#    print(predictt)\n",
+    "\n",
+    "    print(\"Naive Bayes  Accuracy : \\n\", nbscore,\"%\")\n",
+    "    print(\" Completion Speed\", round((time.time() - start_timenb),5))\n",
+    "    print()\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def datree():\n",
+    "    from sklearn import tree\n",
+    "    start_timedt = time.time()\n",
+    "    train_featurestree = vectorizer.fit_transform(x)\n",
+    "    actual1 = y\n",
+    "    test_features1 = vectorizer.transform(x)\n",
+    "    dtree = tree.DecisionTreeClassifier()\n",
+    "    \n",
+    "    dtree = dtree.fit(train_featurestree, [int(r) for r in y])\n",
+    "    \n",
+    "    prediction1 = dtree.predict(test_features1)\n",
+    "    ddd, ttt, thresholds = metrics.roc_curve(actual1, prediction1, pos_label=1)\n",
+    "    dtreescore = format(metrics.auc(ddd, ttt))\n",
+    "    dtreescore = float(dtreescore)*100\n",
+    "    print(\"Decision tree Accuracy : \\n\", dtreescore, \"%\")\n",
+    "    print(\" Completion Speed\", round((time.time() - start_timedt),5))\n",
+    "    print()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def Tsvm():\n",
+    "    from sklearn.svm import SVC\n",
+    "    start_timesvm = time.time()\n",
+    "    train_featuressvm = vectorizer.fit_transform(x)\n",
+    "    actual2 = y\n",
+    "    test_features2 = vectorizer.transform(x)\n",
+    "    svc = SVC()\n",
+    "    \n",
+    "    svc = svc.fit(train_featuressvm, [int(r) for r in y])\n",
+    "    prediction2 = svc.predict(test_features2)\n",
+    "    sss, vvv, thresholds = metrics.roc_curve(actual2, prediction2, pos_label=1)\n",
+    "    svc = format(metrics.auc(sss, vvv))\n",
+    "    svc = float(svc)*100\n",
+    "    print(\"Support vector machine Accuracy : \\n\", svc, \"%\")\n",
+    "    print(\" Completion Speed\", round((time.time() - start_timesvm),5))\n",
+    "    print()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def knN():\n",
+    "    from sklearn.neighbors import KNeighborsClassifier\n",
+    "    start_timekn = time.time()\n",
+    "    train_featureskn = vectorizer.fit_transform(x)\n",
+    "    actual3 = y\n",
+    "    test_features3 = vectorizer.transform(x)\n",
+    "    kn = KNeighborsClassifier(n_neighbors=2)\n",
+    "    \n",
+    "    \n",
+    "    kn = kn.fit(train_featureskn, [int(i) for i in y])\n",
+    "    prediction3 = kn.predict(test_features3)\n",
+    "    kkk, nnn, thresholds = metrics.roc_curve(actual3, prediction3, pos_label=1)\n",
+    "    kn = format(metrics.auc(kkk, nnn))\n",
+    "    kn = float(kn)*100\n",
+    "        print(\"Kneighborsclassifier Accuracy : \\n\", kn, \"%\")\n",
+    "    print(\" Completion Speed\", round((time.time() - start_timekn),5))\n",
+    "    print()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def RanFo():\n",
+    "    from sklearn.ensemble import RandomForestClassifier\n",
+    "    start_timerf = time.time()\n",
+    "    train_featuresrf = vectorizer.fit_transform(x)\n",
+    "    actual4 = y\n",
+    "    test_features4 = vectorizer.transform(x)\n",
+    "    rf = RandomForestClassifier(max_depth=2, random_state=0)\n",
+    "    \n",
+    "    \n",
+    "    rf = rf.fit(train_featuresrf, [int(i) for i in y])\n",
+    "    prediction4 = rf.predict(test_features4)\n",
+    "    rrr, fff, thresholds = metrics.roc_curve(actual4, prediction4, pos_label=1)\n",
+    "    kn = format(metrics.auc(rrr, fff))\n",
+    "    kn = float(kn)*100\n",
+    "    print(\"Random Forest Accuracy : \\n\", kn, \"%\")\n",
+    "    print(\" Completion Speed\", round((time.time() - start_timerf),5))\n",
+    "    print()\n",
+    "    print()\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def runall():     \n",
+    "    retrieveTweet('F:\\\\ML Project\\\\tweetdata.csv')  \n",
+    "    retrieveProcessedData('F:\\\\ML Project\\\\output.xlsx')\n",
+    "    nbTrain()\n",
+    "    datree()\n",
+    "    Tsvm()\n",
+    "    knN()\n",
+    "    RanFo()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\n",
+      "\n",
+      "Naive Bayes  Accuracy : \n",
+      " 93.79406648429645 %\n",
+      " Completion Speed 1.29746\n",
+      "\n",
+      "Decision tree Accuracy : \n",
+      " 98.55668748040587 %\n",
+      " Completion Speed 2.62684\n",
+      "\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "C:\\ProgramData\\Anaconda3\\lib\\site-packages\\sklearn\\svm\\base.py:193: FutureWarning: The default value of gamma will change from 'auto' to 'scale' in version 0.22 to account better for unscaled features. Set gamma explicitly to 'auto' or 'scale' to avoid this warning.\n",
+      "  \"avoid this warning.\", FutureWarning)\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Support vector machine Accuracy : \n",
+      " 50.0 %\n",
+      " Completion Speed 33.88355\n",
+      "\n"
+     ]
+    },
+    {
+     "ename": "MemoryError",
+     "evalue": "Unable to allocate 664. MiB for an array with shape (9331, 9331) and data type float64",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[1;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[1;31mMemoryError\u001b[0m                               Traceback (most recent call last)",
+      "\u001b[1;32m<ipython-input-11-ae816f5e11cc>\u001b[0m in \u001b[0;36m<module>\u001b[1;34m\u001b[0m\n\u001b[0;32m     25\u001b[0m     \u001b[0mprint\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;34m\"<********>\"\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     26\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 27\u001b[1;33m \u001b[0mrunall\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m",
+      "\u001b[1;32m<ipython-input-10-ac1194717d67>\u001b[0m in \u001b[0;36mrunall\u001b[1;34m()\u001b[0m\n\u001b[0;32m      5\u001b[0m     \u001b[0mdatree\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m      6\u001b[0m     \u001b[0mTsvm\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m----> 7\u001b[1;33m     \u001b[0mknN\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m      8\u001b[0m     \u001b[0mRanFo\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32m<ipython-input-8-8f9ee7210fda>\u001b[0m in \u001b[0;36mknN\u001b[1;34m()\u001b[0m\n\u001b[0;32m      9\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     10\u001b[0m     \u001b[0mkn\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mkn\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mfit\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mtrain_featureskn\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m[\u001b[0m\u001b[0mint\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mi\u001b[0m\u001b[1;33m)\u001b[0m \u001b[1;32mfor\u001b[0m \u001b[0mi\u001b[0m \u001b[1;32min\u001b[0m \u001b[0my\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m---> 11\u001b[1;33m     \u001b[0mprediction3\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mkn\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mpredict\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mtest_features3\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m     12\u001b[0m     \u001b[0mkkk\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mnnn\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mthresholds\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mmetrics\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mroc_curve\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mactual3\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mprediction3\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mpos_label\u001b[0m\u001b[1;33m=\u001b[0m\u001b[1;36m1\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m     13\u001b[0m     \u001b[0mkn\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mformat\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mmetrics\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mauc\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mkkk\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mnnn\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32mC:\\ProgramData\\Anaconda3\\lib\\site-packages\\sklearn\\neighbors\\classification.py\u001b[0m in \u001b[0;36mpredict\u001b[1;34m(self, X)\u001b[0m\n\u001b[0;32m    147\u001b[0m         \u001b[0mX\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mcheck_array\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mX\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0maccept_sparse\u001b[0m\u001b[1;33m=\u001b[0m\u001b[1;34m'csr'\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    148\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 149\u001b[1;33m         \u001b[0mneigh_dist\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mneigh_ind\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mkneighbors\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mX\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    150\u001b[0m         \u001b[0mclasses_\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mclasses_\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    151\u001b[0m         \u001b[0m_y\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m_y\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32mC:\\ProgramData\\Anaconda3\\lib\\site-packages\\sklearn\\neighbors\\base.py\u001b[0m in \u001b[0;36mkneighbors\u001b[1;34m(self, X, n_neighbors, return_distance)\u001b[0m\n\u001b[0;32m    432\u001b[0m                 \u001b[0mX\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m_fit_X\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mreduce_func\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mreduce_func\u001b[0m\u001b[1;33m,\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    433\u001b[0m                 \u001b[0mmetric\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0meffective_metric_\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mn_jobs\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mn_jobs\u001b[0m\u001b[1;33m,\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 434\u001b[1;33m                 **kwds))\n\u001b[0m\u001b[0;32m    435\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    436\u001b[0m         \u001b[1;32melif\u001b[0m \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m_fit_method\u001b[0m \u001b[1;32min\u001b[0m \u001b[1;33m[\u001b[0m\u001b[1;34m'ball_tree'\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;34m'kd_tree'\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32mC:\\ProgramData\\Anaconda3\\lib\\site-packages\\sklearn\\metrics\\pairwise.py\u001b[0m in \u001b[0;36mpairwise_distances_chunked\u001b[1;34m(X, Y, reduce_func, metric, n_jobs, working_memory, **kwds)\u001b[0m\n\u001b[0;32m   1444\u001b[0m             \u001b[0mX_chunk\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mX\u001b[0m\u001b[1;33m[\u001b[0m\u001b[0msl\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m   1445\u001b[0m         D_chunk = pairwise_distances(X_chunk, Y, metric=metric,\n\u001b[1;32m-> 1446\u001b[1;33m                                      n_jobs=n_jobs, **kwds)\n\u001b[0m\u001b[0;32m   1447\u001b[0m         if ((X is Y or Y is None)\n\u001b[0;32m   1448\u001b[0m                 \u001b[1;32mand\u001b[0m \u001b[0mPAIRWISE_DISTANCE_FUNCTIONS\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mget\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mmetric\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;32mNone\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32mC:\\ProgramData\\Anaconda3\\lib\\site-packages\\sklearn\\metrics\\pairwise.py\u001b[0m in \u001b[0;36mpairwise_distances\u001b[1;34m(X, Y, metric, n_jobs, **kwds)\u001b[0m\n\u001b[0;32m   1584\u001b[0m         \u001b[0mfunc\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mpartial\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mdistance\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mcdist\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mmetric\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mmetric\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m**\u001b[0m\u001b[0mkwds\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m   1585\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m-> 1586\u001b[1;33m     \u001b[1;32mreturn\u001b[0m \u001b[0m_parallel_pairwise\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mX\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mY\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mfunc\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mn_jobs\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m**\u001b[0m\u001b[0mkwds\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m   1587\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m   1588\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32mC:\\ProgramData\\Anaconda3\\lib\\site-packages\\sklearn\\metrics\\pairwise.py\u001b[0m in \u001b[0;36m_parallel_pairwise\u001b[1;34m(X, Y, func, n_jobs, **kwds)\u001b[0m\n\u001b[0;32m   1202\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m   1203\u001b[0m     \u001b[1;32mif\u001b[0m \u001b[0meffective_n_jobs\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mn_jobs\u001b[0m\u001b[1;33m)\u001b[0m \u001b[1;33m==\u001b[0m \u001b[1;36m1\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m-> 1204\u001b[1;33m         \u001b[1;32mreturn\u001b[0m \u001b[0mfunc\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mX\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mY\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;33m**\u001b[0m\u001b[0mkwds\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m   1205\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m   1206\u001b[0m     \u001b[1;31m# enforce a threading backend to prevent data communication overhead\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32mC:\\ProgramData\\Anaconda3\\lib\\site-packages\\sklearn\\metrics\\pairwise.py\u001b[0m in \u001b[0;36meuclidean_distances\u001b[1;34m(X, Y, Y_norm_squared, squared, X_norm_squared)\u001b[0m\n\u001b[0;32m    271\u001b[0m     \u001b[1;32melse\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    272\u001b[0m         \u001b[1;31m# if dtype is already float64, no need to chunk and upcast\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 273\u001b[1;33m         \u001b[0mdistances\u001b[0m \u001b[1;33m=\u001b[0m \u001b[1;33m-\u001b[0m \u001b[1;36m2\u001b[0m \u001b[1;33m*\u001b[0m \u001b[0msafe_sparse_dot\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mX\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mY\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mT\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdense_output\u001b[0m\u001b[1;33m=\u001b[0m\u001b[1;32mTrue\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    274\u001b[0m         \u001b[0mdistances\u001b[0m \u001b[1;33m+=\u001b[0m \u001b[0mXX\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    275\u001b[0m         \u001b[0mdistances\u001b[0m \u001b[1;33m+=\u001b[0m \u001b[0mYY\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32mC:\\ProgramData\\Anaconda3\\lib\\site-packages\\sklearn\\utils\\extmath.py\u001b[0m in \u001b[0;36msafe_sparse_dot\u001b[1;34m(a, b, dense_output)\u001b[0m\n\u001b[0;32m    137\u001b[0m         \u001b[0mret\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0ma\u001b[0m \u001b[1;33m*\u001b[0m \u001b[0mb\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    138\u001b[0m         \u001b[1;32mif\u001b[0m \u001b[0mdense_output\u001b[0m \u001b[1;32mand\u001b[0m \u001b[0mhasattr\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mret\u001b[0m\u001b[1;33m,\u001b[0m \u001b[1;34m\"toarray\"\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m--> 139\u001b[1;33m             \u001b[0mret\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mret\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mtoarray\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m    140\u001b[0m         \u001b[1;32mreturn\u001b[0m \u001b[0mret\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m    141\u001b[0m     \u001b[1;32melse\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32mC:\\ProgramData\\Anaconda3\\lib\\site-packages\\scipy\\sparse\\compressed.py\u001b[0m in \u001b[0;36mtoarray\u001b[1;34m(self, order, out)\u001b[0m\n\u001b[0;32m   1023\u001b[0m         \u001b[1;32mif\u001b[0m \u001b[0mout\u001b[0m \u001b[1;32mis\u001b[0m \u001b[1;32mNone\u001b[0m \u001b[1;32mand\u001b[0m \u001b[0morder\u001b[0m \u001b[1;32mis\u001b[0m \u001b[1;32mNone\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m   1024\u001b[0m             \u001b[0morder\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m_swap\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;34m'cf'\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m[\u001b[0m\u001b[1;36m0\u001b[0m\u001b[1;33m]\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m-> 1025\u001b[1;33m         \u001b[0mout\u001b[0m \u001b[1;33m=\u001b[0m \u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0m_process_toarray_args\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0morder\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mout\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m   1026\u001b[0m         \u001b[1;32mif\u001b[0m \u001b[1;32mnot\u001b[0m \u001b[1;33m(\u001b[0m\u001b[0mout\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mflags\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mc_contiguous\u001b[0m \u001b[1;32mor\u001b[0m \u001b[0mout\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mflags\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mf_contiguous\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m   1027\u001b[0m             \u001b[1;32mraise\u001b[0m \u001b[0mValueError\u001b[0m\u001b[1;33m(\u001b[0m\u001b[1;34m'Output array must be C or F contiguous'\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;32mC:\\ProgramData\\Anaconda3\\lib\\site-packages\\scipy\\sparse\\base.py\u001b[0m in \u001b[0;36m_process_toarray_args\u001b[1;34m(self, order, out)\u001b[0m\n\u001b[0;32m   1187\u001b[0m             \u001b[1;32mreturn\u001b[0m \u001b[0mout\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m   1188\u001b[0m         \u001b[1;32melse\u001b[0m\u001b[1;33m:\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[1;32m-> 1189\u001b[1;33m             \u001b[1;32mreturn\u001b[0m \u001b[0mnp\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mzeros\u001b[0m\u001b[1;33m(\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mshape\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0mdtype\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0mself\u001b[0m\u001b[1;33m.\u001b[0m\u001b[0mdtype\u001b[0m\u001b[1;33m,\u001b[0m \u001b[0morder\u001b[0m\u001b[1;33m=\u001b[0m\u001b[0morder\u001b[0m\u001b[1;33m)\u001b[0m\u001b[1;33m\u001b[0m\u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0m\u001b[0;32m   1190\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n\u001b[0;32m   1191\u001b[0m \u001b[1;33m\u001b[0m\u001b[0m\n",
+      "\u001b[1;31mMemoryError\u001b[0m: Unable to allocate 664. MiB for an array with shape (9331, 9331) and data type float64"
+     ]
+    },
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 432x288 with 2 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "def datreeINPUT(inputtweet):\n",
+    "    from sklearn import tree\n",
+    "    train_featurestree = vectorizer.fit_transform(x)\n",
+    "    dtree = tree.DecisionTreeClassifier()\n",
+    "    \n",
+    "    dtree = dtree.fit(train_featurestree, [int(r) for r in y])\n",
+    "    \n",
+    "    \n",
+    "    inputdtree= vectorizer.transform([inputtweet])\n",
+    "    predictt = dtree.predict(inputdtree)\n",
+    "    \n",
+    "    if predictt == 1:\n",
+    "        predictt = \"Positive\"\n",
+    "    elif predictt == 0:\n",
+    "        predictt = \"Neutral\"\n",
+    "    elif predictt == -1:\n",
+    "        predictt = \"Negative\"\n",
+    "    else:\n",
+    "        print(\"Nothing\")\n",
+    "        \n",
+    "    print(\"<*********>\")\n",
+    "    \n",
+    "    print(predictt)\n",
+    "    \n",
+    "    print(\"<********>\")\n",
+    "    \n",
+    "runall()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Input your tweet : \n",
+      "happy\n",
+      "<*********>\n",
+      "Neutral\n",
+      "<********>\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(\"Input your tweet : \")\n",
+    "inputtweet = input()\n",
+    "\n",
+    "datreeINPUT(inputtweet)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.6"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}
